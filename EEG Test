@@ -1,0 +1,37 @@
+# import matplotlib.pyplot as plt
+# import numpy as np
+
+# import mne
+# from mne import Epochs, compute_covariance, find_events, make_ad_hoc_cov
+# from mne.datasets import sample
+# from mne.simulation import (
+#     add_ecg,
+#     add_eog,
+#     add_noise,
+#     simulate_raw,
+#     simulate_sparse_stc,
+# )
+
+import time
+print ("Hit or miss")
+time.sleep(1)
+print("I guess they never miss huh?")
+time.sleep(2)
+Join = input('Did they miss?')
+if Join.startswith('y'):
+    print ("You can officaly skrrt and hit a dab like Wiz Khalifa")
+    time.sleep(2)
+else:
+    print ("Damn, keep playing with those balls like its FIFA.")
+    time.sleep(2)
+
+# print(__doc__)
+
+# data_path = sample.data_path()
+# meg_path = data_path / "MEG" / "sample"
+# raw_fname = meg_path / "sample_audvis_raw.fif"
+# fwd_fname = meg_path / "sample_audvis-meg-eeg-oct-6-fwd.fif"
+
+# # Load real data as the template
+# raw = mne.io.read_raw_fif(raw_fname)
+# raw.set_eeg_reference(projection=True)
