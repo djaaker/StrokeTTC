@@ -9,29 +9,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
-import itertools
-import speechpy
-import numpy as np
-import pickle as pkl
-import pandas as pd
-import matplotlib.pyplot as plt
-import scipy.stats as ss
-from tqdm import tqdm
-from scipy.signal import stft, hilbert, butter, freqz, filtfilt, find_peaks, iirnotch
-from control.config import args
-from itertools import groupby
+import random  # For random number generation
+import itertools  # For generating combinations
+import speechpy  # Likely used for feature extraction related to audio/EEG signals
+import numpy as np  # For numerical operations
+import pickle as pkl  # For loading serialized Python objects (in this case, EEG data)
+import pandas as pd  # Data manipulation library
+import matplotlib.pyplot as plt  # For data visualization
+import scipy.stats as ss  # For statistical computations
+from tqdm import tqdm  # For creating progress bars
+from scipy.signal import stft, hilbert, butter, freqz, filtfilt, find_peaks, iirnotch  # Signal processing functions
+from control.config import args  # Importing configuration parameters
+from itertools import groupby  # For grouping iterables
 
+# Torch libraries for deep learning and data loading
 import torch
-import torch.nn.utils.rnn as rnn_utils
-from torch.utils.data import DataLoader
-import torchaudio
+import torch.nn.utils.rnn as rnn_utils  # Utility functions for working with RNNs
+from torch.utils.data import DataLoader  # For loading data batches
+import torchaudio  # Audio processing library
 
+# Custom utility functions from a local module
 from builder.utils.utils import *
 
-
+# Function to generate bipolar signals from EEG channels
 def bipolar_signals_func(signals):
-    bipolar_signals = []
+    bipolar_signals = [] # Initialize an empty list to store bipolar signals
+
+    # Subtract signals from specific EEG channels to create bipolar signals
     bipolar_signals.append(signals[0]-signals[4]) #fp1-f7
     bipolar_signals.append(signals[1]-signals[5]) #fp2-f8
     bipolar_signals.append(signals[4]-signals[9]) #f7-t3
@@ -53,7 +57,7 @@ def bipolar_signals_func(signals):
     bipolar_signals.append(signals[11]-signals[13]) #p3-o1
     bipolar_signals.append(signals[12]-signals[14]) #p4-o2
 
-    return bipolar_signals
+    return bipolar_signals  # Return the bipolar signals as a NumPy array
 
 
 def eeg_binary_collate_fn(train_data):
