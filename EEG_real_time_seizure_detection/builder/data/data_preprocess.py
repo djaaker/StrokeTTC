@@ -137,21 +137,30 @@ def eeg_binary_collate_fn(train_data):
 
 class Detector_Dataset(torch.utils.data.Dataset):
     def __init__(self, args, data_pkls, augment, data_type="training dataset"):
+        # Initialize dataset details
         self.data_type = data_type
-        self._data_list = []
-        self._type_list = []
-        self._type_detail1 = []
-        self._type_detail2 = []
-        self.type_type = []
-        num_normals = 0
-        num_seizures_boundaries = 0
-        num_seizures_middles = 0
-        patient_dev_dict = {}
+        self._data_list = []  # List to store file paths or EEG data entries
+        self._type_list = []  # List to store the label/type for each data entry
+        self._type_detail1 = []  # Stores detailed types (start, middle, end of seizure)
+        self._type_detail2 = []  # Stores whether it's a normal or seizure segment
+        self.type_type = []  # List of unique types (seizure or normal categories)
+
+        num_normals = 0  # Track the number of normal slices
+        num_seizures_boundaries = 0  # Track seizures that occur at boundaries (start or end)
+        num_seizures_middles = 0  # Track seizures occurring in the middle of segments
+        patient_dev_dict = {}  # Dictionary to store data slices per patient
+
+        # Loop over all EEG files (pickled `.edf` files)
         for idx, pkl in enumerate(tqdm(data_pkls, desc="Loading edf files of {}".format(data_type))):
+            # Extract two types of information (label) from the filename
             type1, type2 = pkl.split("_")[-2:]
+
+            # Filter specific data if certain output dimensions are selected
             if type1 == "8":
                 if args.output_dim == 8 or args.binary_sampler_type == "30types":
                     continue
+
+            # Determine label based on the sampler type
             if args.binary_sampler_type == "6types":
                 label = pkl.split("_")[-1].split(".")[0]
             elif args.binary_sampler_type == "30types":
@@ -160,32 +169,39 @@ class Detector_Dataset(torch.utils.data.Dataset):
                 print("Error! select correct binary data type...")
                 exit(1)
 
+            # Limit data selection for non-training datasets
             if "training dataset" != data_type:
-                # if "middle" in pkl:
-                #     continue
-                pat_id = (pkl.split("/")[-1]).split("_")[0]
+                pat_id = (pkl.split("/")[-1]).split("_")[0]  # Extract patient ID from the filename
                 if pat_id not in patient_dev_dict:
-                    patient_dev_dict[pat_id] = [0, 0, 0] # normal, seizure, seiz_middle
-                
-                if (type1 == "0") and (patient_dev_dict[pat_id][0] >= args.dev_bckg_num):
-                    continue
-                if (type1 != "0") and (patient_dev_dict[pat_id][2] >= args.dev_bckg_num):
-                    continue
-                if type1 == "0":
-                    patient_dev_dict[pat_id][0] += 1
-                elif "middle" in pkl:
-                    patient_dev_dict[pat_id][2] += 1
-                else:
-                    patient_dev_dict[pat_id][1] += 1
+                    # Initialize patient data tracking: normal slices, seizure slices, middle seizure slices
+                    patient_dev_dict[pat_id] = [0, 0, 0]  # [normal, seizure, seizure_middle]
 
+                # Apply development constraints: limit the number of background (normal) and seizure slices per patient
+                if (type1 == "0") and (patient_dev_dict[pat_id][0] >= args.dev_bckg_num):
+                    continue  # Skip if too many normal slices
+                if (type1 != "0") and (patient_dev_dict[pat_id][2] >= args.dev_bckg_num):
+                    continue  # Skip if too many middle seizure slices
+
+                # Update counts based on slice type (normal or seizure)
+                if type1 == "0":
+                    patient_dev_dict[pat_id][0] += 1  # Increase normal slice count
+                elif "middle" in pkl:
+                    patient_dev_dict[pat_id][2] += 1  # Increase middle seizure count
+                else:
+                    patient_dev_dict[pat_id][1] += 1  # Increase seizure count
+
+            # Track unique labels (types) for the dataset
             if label not in self.type_type:
                 self.type_type.append(label)
+
+            # Further process and track type details
             type2 = type2.split(".")[0]
-            self._type_detail1.append("_".join([type1, type2]))
-            self._type_detail2.append(type1)
-            self._type_list.append(self.type_type.index(label))
-            self._data_list.append(pkl)
-            
+            self._type_detail1.append("_".join([type1, type2]))  # Store type details like start, middle, end
+            self._type_detail2.append(type1)  # Store whether the type is normal or seizure
+            self._type_list.append(self.type_type.index(label))  # Append the index of the label to the type list
+            self._data_list.append(pkl)  # Append the EEG data (or filename) to the data list
+
+        # Summary statistics printout for the dataset
         print("########## Summary of {} ##########".format(data_type))    
         print("Types of types for sampler: ", self.type_type)  
         print("Number of types for sampler: ", len(self.type_type))
@@ -196,38 +212,44 @@ class Detector_Dataset(torch.utils.data.Dataset):
         print("--- Seizure Slices Info ---")
         total_seiz_slices_num = 0
         for idx, seizure in enumerate(args.seiz_classes):
-            seiz_num = args.seizure_to_num[seizure] 
-            beg_slice_num = self._type_detail1.count(seiz_num + "_beg")
-            middle_slice_num = self._type_detail1.count(seiz_num + "_middle")
-            end_slice_num = self._type_detail1.count(seiz_num + "_end")
-            whole_slice_num = self._type_detail1.count(seiz_num + "_whole")
-            total_seiz_num = self._type_detail2.count(seiz_num)
+            seiz_num = args.seizure_to_num[seizure]  # Convert seizure label to numeric representation
+            beg_slice_num = self._type_detail1.count(seiz_num + "_beg")  # Count seizure start slices
+            middle_slice_num = self._type_detail1.count(seiz_num + "_middle")  # Count middle slices
+            end_slice_num = self._type_detail1.count(seiz_num + "_end")  # Count seizure end slices
+            whole_slice_num = self._type_detail1.count(seiz_num + "_whole")  # Count whole seizure slices
+            total_seiz_num = self._type_detail2.count(seiz_num)  # Count total seizure slices
             total_seiz_slices_num += total_seiz_num
-            print("Number of {} slices: total:{} - beg:{}, middle:{}, end:{}, whole:{}".format(seizure, str(total_seiz_num), str(beg_slice_num), str(middle_slice_num), str(end_slice_num), str(whole_slice_num)))
+            print("Number of {} slices: total:{} - beg:{}, middle:{}, end:{}, whole:{}".format(
+                seizure, str(total_seiz_num), str(beg_slice_num), str(middle_slice_num), str(end_slice_num), str(whole_slice_num)
+            ))
         print("Total seizure slices: ", str(total_seiz_slices_num))
         print("Dataset Prepared...\n")
         
         if "training dataset" != data_type:
+            # Print out statistics for non-training datasets
             print("Number of patients: ", len(patient_dev_dict))
             for pat_info in patient_dev_dict:
                 pat_normal, pat_seiz, pat_middle = patient_dev_dict[pat_info]
-                print("(Non-)Patient: {} has normals:{}, seizures:{}, mid_seizures:{}".format(pat_info, str(pat_normal), str(pat_seiz), str(pat_middle)))
+                print("(Non-)Patient: {} has normals:{}, seizures:{}, mid_seizures:{}".format(
+                    pat_info, str(pat_normal), str(pat_seiz), str(pat_middle)
+                ))
                 num_normals += pat_normal
                 num_seizures_boundaries += pat_seiz
                 num_seizures_middles += pat_middle
             
-            print("Total normals:{}, seizures with boundaries:{}, seizures with middles:{}".format(str(num_normals), str(num_seizures_boundaries), str(num_seizures_middles)))
+            print("Total normals:{}, seizures with boundaries:{}, seizures with middles:{}".format(
+                str(num_normals), str(num_seizures_boundaries), str(num_seizures_middles)
+            ))
 
     def __repr__(self):
         return (f"Data path: {self._data_pkl}")
 
     def __len__(self):
-        return len(self._data_list)
+        return len(self._data_list)  # Return the number of data entries
 
     def __getitem__(self, index):
-        _input = self._data_list[index]
+        _input = self._data_list[index]  # Retrieve the EEG data (or path) by index
         return _input
-
 
 def get_data_preprocessed(args, mode="train"):
    
