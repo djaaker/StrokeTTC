@@ -768,6 +768,7 @@ def main(args):
                     'EEG P3', 'EEG P4', 'EEG O1', 'EEG O2', 'EEG T5', 'EEG T6', 'EEG PZ', 'EEG FZ']
 
     eeg_data_directory = "$PATH_TO_EEG/{}".format(data_type)
+    print("this is eeg data directory: ", eeg_data_directory)
     # eeg_data_directory = "/mnt/aitrics_ext/ext01/shared/edf/tuh_final/{}".format(data_type)
     
     if label_type == "tse":
@@ -777,11 +778,15 @@ def main(args):
     disease_labels_inv = {v: k for k, v in disease_labels.items()}
     
     edf_list1 = search_walk({'path': eeg_data_directory, 'extension': ".edf"})
+    print("this is edf list1: ", edf_list1)
     edf_list2 = search_walk({'path': eeg_data_directory, 'extension': ".EDF"})
+    print("this is edf list2: ", edf_list2)
     if edf_list2:
         edf_list = edf_list1 + edf_list2
+        print("this is edf list in the if statement: ", edf_list)
     else:
         edf_list = edf_list1
+        print("this is edf list in the else statement: ", edf_list)
 
     if os.path.isdir(data_file_directory):
         os.system("rm -rf {}".format(data_file_directory))
@@ -812,6 +817,7 @@ def main(args):
     GLOBAL_DATA['binary_target2'] = args.binary_target2
 
     print("########## Preprocessor Setting Information ##########")
+    print("this is edf list: ", edf_list)
     print("Number of EDF files: ", len(edf_list))
     for i in GLOBAL_DATA:
         print("{}: {}".format(i, GLOBAL_DATA[i]))

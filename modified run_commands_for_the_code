@@ -1,0 +1,7 @@
+pip install -r requirements.txt
+
+#version trying to run locally on my computer
+python 1_preprocess.py --data_type train --cpu_num 12 --label_type tse_bi --save_directory /Volumes/SDCARD/v2.0.3/edf --samplerate 200
+
+
+python 1_preprocess.py --data_type train --cpu_num 12 --label_type tse --save_directory /Volumes/SDCARD/v2.0.3/edf --samplerate 200
