@@ -642,7 +642,7 @@ def main(args):
         run_multi_process(generate_training_data_leadwise_tuh_train_final, edf_list, n_processes=cpu_num)
 
 def run_main(
-    save_directory,
+    save_directory = '/Volumes/SDCARD/v2.0.3/edf',
     samplerate=200,
     data_type='train',
     dataset='tuh',

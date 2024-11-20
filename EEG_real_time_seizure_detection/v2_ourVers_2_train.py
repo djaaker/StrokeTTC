@@ -9,12 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#this calls get_deta_preprocessed from data_preprocess.py, which is a function that returns the train, validation, and test data loaders AND works with the eeg_binary_collate_fn(train_data) function which is in charge of the real-time data augmentation, soooooo we still need to mess around with that
-
-#this also calls get_detector_model from models.py, which is a function that returns the model based on the configuration arguments, and the goal is to ignore that and rewrite it to use the resnet_lstm model
-
-#big goal is to have one python file that holds all the important info from data_preprocess.py, 1_preprocess.py, resnet_lstm.py, and this file 2_train.py, (plus all the necessary builder and control files) and be able to run it all in one go
-
 # Importing required libraries and modules
 import numpy as np
 import os
@@ -37,7 +31,7 @@ from torchinfo import summary
 # Custom modules and utilities (required external Python files)
 from builder.utils.lars import LARC  # Optimizer utility (external file needed)
 from builder.data.data_preprocess import get_data_preprocessed  # Data preprocessing function (external file needed)
-from builder.models import get_detector_model, grad_cam  # Model definition and Grad-CAM utility (external files needed)
+from builder.models.detector_models.commented_resnet_lstm import CNN2D_LSTM_V8_4  # Import ResNetLSTM model directly (external file needed)
 from builder.utils.logger import Logger  # Logger utility to track training and validation metrics (external file needed)
 from builder.utils.utils import set_seeds, set_devices  # Utility functions for setting seeds and devices (external file needed)
 from builder.utils.cosine_annealing_with_warmup import CosineAnnealingWarmUpRestarts  # Custom learning rate scheduler (external file needed)
@@ -78,10 +72,17 @@ class Args:
     test_type = "test"
     device = 0  # GPU device number to use
 
+    binary_target_groups = 2
+    output_dim = 2
+
+    # Manually set paths here instead of using a YAML config file
+    data_path = '/path/to/data_directory/data_path'  # Set the data path directly
+    dir_root = os.getcwd()  # Set the root directory as the current working directory
+    dir_result = '/path/to/results_directory'  # Set the result directory directly
+
 def initialize_model(args, device):
     # Create the model
-    model = get_detector_model(args)  # Initialize model based on configuration arguments
-    model = model(args, device).to(device)  # Move model to appropriate device (CPU, GPU, or MPS)
+    model = ResNetLSTM(args).to(device)  # Directly initialize ResNetLSTM and move to the appropriate device (CPU, GPU, or MPS)
     return model
 
 def load_checkpoint(args, model, device, logger, seed_num):
@@ -188,8 +189,8 @@ def main():
     print(f"Using device: {device}")
 
     # Define result classes for validation and test results
-    save_valid_results = experiment_results_validation(args)
-    save_test_results = experiment_results(args)
+    #save_valid_results = experiment_results_validation(args)
+    #save_test_results = experiment_results(args)
 
     # Loop through each seed to train and evaluate the model
     for seed_num in args.seed_list:

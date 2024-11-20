@@ -178,7 +178,8 @@ else:
 args.num_to_seizure_items = [v for k, v in args.num_to_seizure.items()]
 
 # Dataset Path settings
-with open('./control/path_configs.yaml') as f:
+with open
+('./control/path_configs.yaml') as f:
     path_configs = yaml.safe_load(f)
     args.data_path = path_configs['data_directory']['data_path']
     args.dir_root =  os.getcwd()
