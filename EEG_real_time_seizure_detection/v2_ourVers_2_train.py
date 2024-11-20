@@ -224,4 +224,4 @@ def main():
         save_valid_results.results_all_seeds(logger.test_results)  # Save validation results
 
 if __name__ == "__main__":
-    ma
+    main()

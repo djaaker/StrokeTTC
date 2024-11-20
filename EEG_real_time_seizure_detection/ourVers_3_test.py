@@ -23,7 +23,8 @@ import torch.nn as nn
 from builder.models.detector_models.commented_resnet_lstm import CNN2D_LSTM_V8_4  # Import ResNetLSTM model directly (external file needed)
 from builder.utils.metrics import Evaluator
 from builder.utils.logger import Logger
-from builder.trainer.trainer import sliding_window_v1
+# Instead of importing from builder.trainer, use the correct module
+from builder.trainer.OurVers_trainer import sliding_window_v2
 from builder.utils.utils import set_seeds, set_devices
 
 # Manually set arguments here instead of using argparse
@@ -133,7 +134,7 @@ for name in names:
             print(f'iteration : {iteration}')
             iteration_start = time.time()
             if args.task_type == "binary": 
-                model, _ = sliding_window_v1(args, iteration, test_x, test_y, seq_lengths, 
+                model, _ = sliding_window_v2(args, iteration, test_x, test_y, seq_lengths, 
                                             target_lengths, model, logger, device, scheduler,
                                             optimizer, criterion, signal_name_list=signal_name_list, flow_type="test")
             else:
