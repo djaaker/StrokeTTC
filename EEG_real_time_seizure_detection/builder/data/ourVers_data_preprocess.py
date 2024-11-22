@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from IPython.display import display
 import ipywidgets
 import mne
 import os
@@ -25,14 +26,159 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 
+import pyedflib
+import numpy as np
+import os
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+#from tensorflow.keras.utils import to_categorical
+
+#trainPath = r"D:\v2.0.3\edf\train"
+#evalPath = r"D:\v2.0.3\edf\eval"
+#labelPath = r"C:\Users\dalto\Box Sync\abnLabels.csv" """
+trainPath = r"/Volumes/SDCARD/v2.0.3/edf/train"
+evalPath = r"/Volumes/SDCARD/v2.0.3/edf/eval"
+labelPath = r"/Users/User/Documents/GitHub/StrokeTTC/EEG_real_time_seizure_detection/DiseaseLabels.csv"
+
+labelFrame = pd.read_csv(labelPath)
+
+labels = []
+names = []
+tests = []
+noLabelCnt = 0
+
+for split in enumerate([os.listdir(trainPath), os.listdir(evalPath)]):
+    test = split[0]
+
+    subName = split[1]
+
+    for sub in subName:
+        # if sub is in labelFrame
+        if len(labelFrame.loc[labelFrame['name'] == sub]) == 0:
+            print("No label found for", sub)
+            noLabelCnt += 1
+        else:
+            labels.append(labelFrame.loc[labelFrame['name'] == sub, 'label'].values[0])
+            names.append(sub)
+            tests.append(test)
+
+df = pd.DataFrame({'name': names, 'label': labels, 'test': tests})
+
+import glob
+
+# list all of the .edf files in each train and eval folder
+healthyEdfs = []  # List to store the paths of all .edf files
+seizEdfs = []  # List to store the paths of all .edf files
+edfLabels = []  # List to store the labels corresponding to each .edf file
+
+# Sample of the 'df' DataFrame (in your case, the DataFrame might already be available)
+# df = pd.read_csv('path/to/your_dataframe.csv')
+
+# Loop through each subject in the 'names' list
+for subject in names:
+    subject_path = os.path.join(trainPath, subject)
+    
+    # Find the label corresponding to the subject from the DataFrame
+    subject_label = df[df['name'] == subject]['label'].values[0]
+    
+    # Loop through all the date of recording folders (e.g., s001_2002)
+    if os.path.exists(subject_path):
+        for recording_date in os.listdir(subject_path):
+            recording_date_path = os.path.join(subject_path, recording_date)
+            
+            # Loop through all cap setup folders (e.g., 02_tcp_le)
+            if os.path.isdir(recording_date_path):
+                for cap_setup in os.listdir(recording_date_path):
+                    cap_setup_path = os.path.join(recording_date_path, cap_setup)
+                    
+                    # Find all .edf files in the final directory
+                    if os.path.isdir(cap_setup_path):
+                        edf_files_in_dir = glob.glob(os.path.join(cap_setup_path, "*.edf"))
+                        
+                        # Add each .edf file to the list, and also add its corresponding label
+                        for edf_file in edf_files_in_dir:
+                            if subject_label == 0:
+                                healthyEdfs.append(edf_file)
+                            else:
+                                seizEdfs.append(edf_file)
+
+# check for any duplicate .edf files
+healthyEdfs = list(set(healthyEdfs))
+seizEdfs = list(set(seizEdfs))
+edfFiles = healthyEdfs + seizEdfs
+
+# add the labels to the edf files
+edfLabels = [0] * len(healthyEdfs) + [3] * len(seizEdfs)
+
+# print the number of edf files
+print("Edf count:", len(edfFiles))
+
+# print the number of subjects in each edfLabel class
+print("Healthy count:", len([x for x in edfLabels if x == 0]))
+print("Seizure count:", len([x for x in edfLabels if x == 3]))
+
+# merge the edfFiles and edfLabels into a dataframe and shuffle it
+mlData = pd.DataFrame({'file': edfFiles, 'label': edfLabels})
+mlData = mlData.sample(frac=1).reset_index(drop=True)
+
+# cut the list down to 200 files while keeping the count of each label the same
+mlData = mlData.groupby('label').head(30)
+
+# set all '3' values in the label column to '1'
+mlData['label'] = mlData['label'].replace(3, 1)
+
+# mlData = mlData.head(200)
+display(mlData)
+
+# print the number of each label in the dataframe
+print("Healthy count:", len(mlData[mlData['label'] == 0]))
+print("Seizure count:", len(mlData[mlData['label'] == 1]))
+
+print(len(mlData))
+
+
+
 EDFInputPath = r'/Volumes/SDCARD/v2.0.3/edf/train'
-EDFOutputPath = 'OutputFiles'
+#EDFOutputPath = 'OutputFiles'
 
 # import a csv file with the patient ID and the label
 df = pd.read_csv(r'EEG_real_time_seizure_detection/DiseaseLabels.csv')
 
 # make the voices go away
 mne.set_log_level(verbose=False)
+
+class Args:
+    seed_list = [0, 1004, 911, 2021, 119]
+    seed = 10
+    project_name = "test_project"
+    checkpoint = False
+    epochs = 10
+    batch_size = 32
+    optim = 'adam'
+    lr_scheduler = "Single"
+    lr_init = 1e-3
+    lr_max = 4e-3
+    t_0 = 5
+    t_mult = 2
+    t_up = 1
+    gamma = 0.5
+    momentum = 0.9
+    weight_decay = 1e-6
+    task_type = 'binary'
+    log_iter = 10
+    best = True
+    last = False
+    test_type = "test"
+    device = 0  # GPU device number to use
+    binary_target_groups = 2
+    output_dim = 2
+
+    target_channels = 40
+    target_points = 5000
+    segment_length = 500
+    max_time_points = 100000
+
+args = Args()
 
 # run through all of the files present in the folder
 def AllEDFProcess(EDFFolder):
@@ -149,13 +295,13 @@ def AlphaDeltaProcess(EEGFile):
     return PSDRatDF
 
 # Run the function
-BPEEGDataFiles, ADRatioDF = AllEDFProcess(EDFInputPath)
+# BPEEGDataFiles, ADRatioDF = AllEDFProcess(EDFInputPath)
 
 class Detector_Dataset(Dataset):
     def __init__(self, data_paths, labels, args):
         self.data_paths = data_paths  # Paths to the preprocessed data files
         self.labels = labels  # Corresponding labels for each data file
-        self.args = args  # Configuration arguments (e.g., window size, eeg_type)
+        #self.args = args  # Configuration arguments (e.g., window size, eeg_type)
     
     def __len__(self):
         return len(self.data_paths)
@@ -164,20 +310,41 @@ class Detector_Dataset(Dataset):
         # Load preprocessed EEG data from .edf file
         data_path = self.data_paths[index]
         raw = mne.io.read_raw_edf(data_path, preload=True, verbose=False)  # Load the EDF file
-        signals = raw.get_data()  # Extract the raw EEG signals as a NumPy array
+        data = raw.get_data()  # Extract the raw EEG signals as a NumPy array
         label = self.labels[index]
 
-        # Depending on the configuration, apply bipolar or unipolar processing
-        # if self.args.eeg_type == "bipolar":
-        #     signals = bipolar_signals_func(signals)  # Apply bipolar processing
-        #     signals = torch.tensor(signals)  # Convert to tensor
-        # elif self.args.eeg_type == "uni_bipolar":
-        #     bipolar_signals = bipolar_signals_func(signals)
-        #     signals = torch.cat((torch.tensor(signals), torch.tensor(bipolar_signals)))  # Combine unipolar and bipolar signals
-        # else:
-        signals = torch.tensor(signals)
+        # Limit the number of time points if they exceed max_time_points
+        if data.shape[1] > args.max_time_points:
+            data = data[:, :args.max_time_points]
 
-        return signals, label, data_path.split("/")[-1].split(".")[0]
+        # Pad or trim channels to match target_channels
+        if data.shape[0] < args.target_channels:
+            # If the number of channels is less than target_channels, pad with zeros
+            padding = np.zeros((args.target_channels - data.shape[0], data.shape[1]))
+            data = np.vstack((data, padding))
+        elif data.shape[0] > args.target_channels:
+            # If the number of channels is more than target_channels, trim the channels
+            data = data[:args.target_channels, :]
+
+        # Randomly select a segment to keep the data size manageable
+        if data.shape[1] > args.segment_length:
+            start = np.random.randint(0, max(1, data.shape[1] - args.segment_length))
+            end = start + args.segment_length
+            segment = data[:, start:end]
+        else:
+            # If the data has fewer time points than segment_length, use all available points
+            segment = data
+
+        # Interpolate or compress each segment to match target_points
+        if segment.shape[1] != args.target_points:
+            segment = np.array([np.interp(np.linspace(0, 1, args.target_points),
+                                          np.linspace(0, 1, segment.shape[1]), channel)
+                                for channel in segment])
+
+        # Reshape segment to match the input dimensions required by the model
+        segment = torch.tensor(np.expand_dims(segment, axis=0), dtype=torch.int32)  # Add a single channel dimension
+
+        return segment, label, data_path.split("/")[-1].split(".")[0]
 
 def eeg_binary_collate_fn(batch):
     def seq_length_(p):
@@ -202,15 +369,15 @@ def eeg_binary_collate_fn(batch):
     targets = torch.zeros(batch_size).to(torch.long)
     signal_name_list = []
 
-    for i in range(batch_size):
-        sample = batch[i]
-        signals, label, signal_name = sample
-        seq_length = len(signals)
+    # for i in range(batch_size):
+    #     sample = batch[i]
+    #     signals, label, signal_name = sample
+    #     seq_length = len(signals)
 
-        # Copy the EEG signals into the corresponding batch tensor, with padding where needed
-        seqs[i, :seq_length] = signals.permute(1, 0)  # Adjusting dimension to match expected batch format
-        targets[i] = label
-        signal_name_list.append(signal_name)
+    #     # Copy the EEG signals into the corresponding batch tensor, with padding where needed
+    #     seqs[i, :seq_length] = signals.permute(1, 0)  # Adjusting dimension to match expected batch format
+    #     targets[i] = label
+    #     signal_name_list.append(signal_name)
 
     return seqs, targets, seq_lengths, target_lengths, [], signal_name_list
 
@@ -224,11 +391,12 @@ args = {
 }
 
 # Set the columns to the signal and label data
-display(BPEEGDataFiles)
-SignalData = [row[0] for row in BPEEGDataFiles]
-LabelData = [row[1] for row in BPEEGDataFiles]
+#display(BPEEGDataFiles)
+#SignalData = [row[0] for row in BPEEGDataFiles]
+#LabelData = [row[1] for row in BPEEGDataFiles]
 
-Detector_Dataset(SignalData, LabelData, args)
+eeg_files = mlData['file'].tolist()
+Detector_Dataset(eeg_files, labels, args)
 #for batch in DataLoader:
  #   sequences, targets, seq_lengths, target_lengths, aug_list, signal_name_list = batch
 
@@ -292,9 +460,9 @@ def get_data_preprocessed(args, mode="train"):
     test_data = Detector_Dataset(args, data_pkls=test_dir, augment=aug_test, data_type="test dataset")
 
     train_loader = DataLoader(train_data, batch_size=args.batch_size, drop_last=True,
-                    num_workers=1, pin_memory=True, sampler=sampler, collate_fn=eeg_binary_collate_fn)     
+                    num_workers=1, pin_memory=True, sampler=sampler)    
     val_loader = DataLoader(val_data, batch_size=args.batch_size, drop_last=True,
-                    num_workers=1, pin_memory=True, collate_fn=eeg_binary_collate_fn)               
+                    num_workers=1, pin_memory=True)               
     test_loader = DataLoader(test_data, batch_size=args.batch_size, drop_last=True,
                     num_workers=1, pin_memory=True, collate_fn=eeg_binary_collate_fn)  
 
