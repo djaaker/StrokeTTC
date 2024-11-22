@@ -82,7 +82,7 @@ class Args:
 
 def initialize_model(args, device):
     # Create the model
-    model = ResNetLSTM(args).to(device)  # Directly initialize ResNetLSTM and move to the appropriate device (CPU, GPU, or MPS)
+    model = CNN2D_LSTM_V8_4(args).to(device)  # Directly initialize ResNetLSTM and move to the appropriate device (CPU, GPU, or MPS)
     return model
 
 def load_checkpoint(args, model, device, logger, seed_num):
