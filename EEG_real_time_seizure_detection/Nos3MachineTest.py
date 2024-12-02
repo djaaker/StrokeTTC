@@ -148,34 +148,6 @@ def AlphaDeltaProcess(EEGFile):
 BPEEGDataFiles, ADRatioDF = AllEDFProcess(EDFInputPath)
 
 
-# def bipolar_signals_func(signals):
-#     bipolar_signals = [] # Initialize an empty list to store bipolar signals
-
-#     # Subtract signals from specific EEG channels to create bipolar signals
-#     bipolar_signals.append(signals[0]-signals[4]) #fp1-f7
-#     bipolar_signals.append(signals[1]-signals[5]) #fp2-f8
-#     bipolar_signals.append(signals[4]-signals[9]) #f7-t3
-#     bipolar_signals.append(signals[5]-signals[10]) #f8-t4
-#     bipolar_signals.append(signals[9]-signals[15]) #t3-t5
-#     bipolar_signals.append(signals[10]-signals[16]) #t4-t6
-#     bipolar_signals.append(signals[15]-signals[13]) #t5-o1
-#     bipolar_signals.append(signals[16]-signals[14]) #t6-o2
-#     bipolar_signals.append(signals[9]-signals[6]) #t3-c3
-#     bipolar_signals.append(signals[7]-signals[10]) #c4-t4
-#     bipolar_signals.append(signals[6]-signals[8]) #c3-cz
-#     bipolar_signals.append(signals[8]-signals[7]) #cz-c4
-#     bipolar_signals.append(signals[0]-signals[2]) #fp1-f3
-#     bipolar_signals.append(signals[1]-signals[3]) #fp2-f4
-#     bipolar_signals.append(signals[2]-signals[6]) #f3-c3
-#     bipolar_signals.append(signals[3]-signals[7]) #f4-c4
-#     bipolar_signals.append(signals[6]-signals[11]) #c3-p3
-#     bipolar_signals.append(signals[7]-signals[12]) #c4-p4
-#     bipolar_signals.append(signals[11]-signals[13]) #p3-o1
-#     bipolar_signals.append(signals[12]-signals[14]) #p4-o2
-
-#     return bipolar_signals  # Return the bipolar signals as a NumPy array
-
-
 class Detector_Dataset(Dataset):
     def __init__(self, data_paths, labels, args):
         self.data_paths = data_paths  # Paths to the preprocessed data files
