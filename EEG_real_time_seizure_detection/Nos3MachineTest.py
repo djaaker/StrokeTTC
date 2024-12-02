@@ -26,7 +26,6 @@ from torch.utils.data import Dataset, DataLoader
 
 
 EDFInputPath = 'Volumes/SDCARD/v2.0.3/edf/train'
-EDFOutputPath = 'OutputFiles'
 
 # import a csv file with the patient ID and the label
 df = pd.read_csv(r'EEG_real_time_seizure_detection/DiseaseLabels.csv')
@@ -36,14 +35,6 @@ mne.set_log_level(verbose=False)
 
 # run through all of the files present in the folder
 def AllEDFProcess(EDFFolder):
-    # if not os.path.exists(EDFOutputPath):
-    #     os.makedirs(EDFOutputPath)
-    
-    # for FileName in os.listdir(EDFFolder):
-    #     if FileName.endswith('.edf'):
-    #         EDFFilePath = os.path.join(EDFFolder, FileName)
-    #         EDFProcess(EDFFilePath)
-    # EDFFiles = list_edf_files_from_s3(BucketName, EDFFolder)
     DataFiles = []
     PSD_Array = []
     processed_data_array = []
@@ -51,14 +42,7 @@ def AllEDFProcess(EDFFolder):
     for FileName in os.listdir(EDFFolder):
           if FileName.endswith('.edf'):
              EDFFilePath = os.path.join(EDFFolder, FileName)
-             #processed_data, PSD_data = EDFProcess(EDFFilePath)
              DataFiles.append(FileName)
-             #processed_data_array.append(processed_data)
-             #PSD_Array.append(PSD_data)
-             #return processed_data, PSD_data, EEG_image, DataFiles
-    # if not os.path.exists(temp_dir):
-    #     os.makedirs(temp_dir)
-    #display(DataFiles)
     BPEEGDataFiles = []
     label = []
     # run through each file individually
@@ -94,20 +78,14 @@ def AllEDFProcess(EDFFolder):
     return BPEEGDataFiles, ADRatioDF
 
         
-        
-            
-            
 # Process the edf files
 def EDFProcess(EDFFilePath):
     # get raw file
     RawEEGDataFile = mne.io.read_raw_edf(EDFFilePath, preload=True, verbose=False)
     RawEEGDataFile.interpolate_bads(verbose=None)
 
-    
-
     # bandpass raw file
     BPEEGDataFile = BPFilter(RawEEGDataFile)
-    
     
     # AD ratio raw file
     ADRatioDF = AlphaDeltaProcess(BPEEGDataFile)
@@ -143,38 +121,8 @@ def AlphaDeltaProcess(EEGFile):
     #display(PSDRatDF)
     return PSDRatDF
 
-
 # Run the function
 BPEEGDataFiles, ADRatioDF = AllEDFProcess(EDFInputPath)
-
-
-# def bipolar_signals_func(signals):
-#     bipolar_signals = [] # Initialize an empty list to store bipolar signals
-
-#     # Subtract signals from specific EEG channels to create bipolar signals
-#     bipolar_signals.append(signals[0]-signals[4]) #fp1-f7
-#     bipolar_signals.append(signals[1]-signals[5]) #fp2-f8
-#     bipolar_signals.append(signals[4]-signals[9]) #f7-t3
-#     bipolar_signals.append(signals[5]-signals[10]) #f8-t4
-#     bipolar_signals.append(signals[9]-signals[15]) #t3-t5
-#     bipolar_signals.append(signals[10]-signals[16]) #t4-t6
-#     bipolar_signals.append(signals[15]-signals[13]) #t5-o1
-#     bipolar_signals.append(signals[16]-signals[14]) #t6-o2
-#     bipolar_signals.append(signals[9]-signals[6]) #t3-c3
-#     bipolar_signals.append(signals[7]-signals[10]) #c4-t4
-#     bipolar_signals.append(signals[6]-signals[8]) #c3-cz
-#     bipolar_signals.append(signals[8]-signals[7]) #cz-c4
-#     bipolar_signals.append(signals[0]-signals[2]) #fp1-f3
-#     bipolar_signals.append(signals[1]-signals[3]) #fp2-f4
-#     bipolar_signals.append(signals[2]-signals[6]) #f3-c3
-#     bipolar_signals.append(signals[3]-signals[7]) #f4-c4
-#     bipolar_signals.append(signals[6]-signals[11]) #c3-p3
-#     bipolar_signals.append(signals[7]-signals[12]) #c4-p4
-#     bipolar_signals.append(signals[11]-signals[13]) #p3-o1
-#     bipolar_signals.append(signals[12]-signals[14]) #p4-o2
-
-#     return bipolar_signals  # Return the bipolar signals as a NumPy array
-
 
 class Detector_Dataset(Dataset):
     def __init__(self, data_paths, labels, args):
@@ -192,14 +140,6 @@ class Detector_Dataset(Dataset):
         signals = raw.get_data()  # Extract the raw EEG signals as a NumPy array
         label = self.labels[index]
 
-        # Depending on the configuration, apply bipolar or unipolar processing
-        # if self.args.eeg_type == "bipolar":
-        #     signals = bipolar_signals_func(signals)  # Apply bipolar processing
-        #     signals = torch.tensor(signals)  # Convert to tensor
-        # elif self.args.eeg_type == "uni_bipolar":
-        #     bipolar_signals = bipolar_signals_func(signals)
-        #     signals = torch.cat((torch.tensor(signals), torch.tensor(bipolar_signals)))  # Combine unipolar and bipolar signals
-        # else:
         signals = torch.tensor(signals)
 
         return signals, label, data_path.split("/")[-1].split(".")[0]
