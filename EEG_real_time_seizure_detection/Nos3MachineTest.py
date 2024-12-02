@@ -26,7 +26,6 @@ from torch.utils.data import Dataset, DataLoader
 
 
 EDFInputPath = 'Volumes/SDCARD/v2.0.3/edf/train'
-EDFOutputPath = 'OutputFiles'
 
 # import a csv file with the patient ID and the label
 df = pd.read_csv(r'EEG_real_time_seizure_detection/DiseaseLabels.csv')
@@ -36,14 +35,6 @@ mne.set_log_level(verbose=False)
 
 # run through all of the files present in the folder
 def AllEDFProcess(EDFFolder):
-    # if not os.path.exists(EDFOutputPath):
-    #     os.makedirs(EDFOutputPath)
-    
-    # for FileName in os.listdir(EDFFolder):
-    #     if FileName.endswith('.edf'):
-    #         EDFFilePath = os.path.join(EDFFolder, FileName)
-    #         EDFProcess(EDFFilePath)
-    # EDFFiles = list_edf_files_from_s3(BucketName, EDFFolder)
     DataFiles = []
     PSD_Array = []
     processed_data_array = []
@@ -51,14 +42,7 @@ def AllEDFProcess(EDFFolder):
     for FileName in os.listdir(EDFFolder):
           if FileName.endswith('.edf'):
              EDFFilePath = os.path.join(EDFFolder, FileName)
-             #processed_data, PSD_data = EDFProcess(EDFFilePath)
              DataFiles.append(FileName)
-             #processed_data_array.append(processed_data)
-             #PSD_Array.append(PSD_data)
-             #return processed_data, PSD_data, EEG_image, DataFiles
-    # if not os.path.exists(temp_dir):
-    #     os.makedirs(temp_dir)
-    #display(DataFiles)
     BPEEGDataFiles = []
     label = []
     # run through each file individually
@@ -94,20 +78,14 @@ def AllEDFProcess(EDFFolder):
     return BPEEGDataFiles, ADRatioDF
 
         
-        
-            
-            
 # Process the edf files
 def EDFProcess(EDFFilePath):
     # get raw file
     RawEEGDataFile = mne.io.read_raw_edf(EDFFilePath, preload=True, verbose=False)
     RawEEGDataFile.interpolate_bads(verbose=None)
 
-    
-
     # bandpass raw file
     BPEEGDataFile = BPFilter(RawEEGDataFile)
-    
     
     # AD ratio raw file
     ADRatioDF = AlphaDeltaProcess(BPEEGDataFile)
@@ -143,10 +121,8 @@ def AlphaDeltaProcess(EEGFile):
     #display(PSDRatDF)
     return PSDRatDF
 
-
 # Run the function
 BPEEGDataFiles, ADRatioDF = AllEDFProcess(EDFInputPath)
-
 
 class Detector_Dataset(Dataset):
     def __init__(self, data_paths, labels, args):
@@ -164,14 +140,6 @@ class Detector_Dataset(Dataset):
         signals = raw.get_data()  # Extract the raw EEG signals as a NumPy array
         label = self.labels[index]
 
-        # Depending on the configuration, apply bipolar or unipolar processing
-        # if self.args.eeg_type == "bipolar":
-        #     signals = bipolar_signals_func(signals)  # Apply bipolar processing
-        #     signals = torch.tensor(signals)  # Convert to tensor
-        # elif self.args.eeg_type == "uni_bipolar":
-        #     bipolar_signals = bipolar_signals_func(signals)
-        #     signals = torch.cat((torch.tensor(signals), torch.tensor(bipolar_signals)))  # Combine unipolar and bipolar signals
-        # else:
         signals = torch.tensor(signals)
 
         return signals, label, data_path.split("/")[-1].split(".")[0]

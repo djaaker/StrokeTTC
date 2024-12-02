@@ -575,6 +575,7 @@ def generate_training_data_leadwise_tuh_dev(file):
 
 
 def main(args):
+    print('Main is running...')
     save_directory = args['save_directory']
     data_type = args['data_type']
     dataset = args['dataset']
@@ -629,7 +630,7 @@ def main(args):
     })
 
     print("########## Preprocessor Setting Information ##########")
-    print("Number of EDF files:", len(edf_list))
+    print("Number of EDF files:", edf_list)
     for key, value in GLOBAL_DATA.items():
         print(f"{key}: {value}")
 
@@ -672,3 +673,5 @@ def run_main(
         'min_binary_edge_seiz': min_binary_edge_seiz
     }
     main(args)
+
+run_main()
