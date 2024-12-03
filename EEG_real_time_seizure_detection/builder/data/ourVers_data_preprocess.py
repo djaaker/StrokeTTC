@@ -38,9 +38,12 @@ from sklearn.preprocessing import LabelEncoder
 #labelPath = r"C:\Users\dalto\Box Sync\abnLabels.csv" """
 trainPath = r"/Volumes/SDCARD/v2.0.3/edf/train"
 evalPath = r"/Volumes/SDCARD/v2.0.3/edf/eval"
-labelPath = r"/Users/User/Documents/GitHub/StrokeTTC/EEG_real_time_seizure_detection/DiseaseLabels.csv"
+labelPath = r"EEG_real_time_seizure_detection/DiseaseLabels.csv"
+#labelPath = r"EEG_real_time_seizure_detection/TUHEEG_labels_Combined.csv"
 
 labelFrame = pd.read_csv(labelPath)
+print('this is label frame: \n', labelFrame)
+
 
 labels = []
 names = []
@@ -135,7 +138,6 @@ print("Healthy count:", len(mlData[mlData['label'] == 0]))
 print("Seizure count:", len(mlData[mlData['label'] == 1]))
 
 print(len(mlData))
-
 
 
 EDFInputPath = r'/Volumes/SDCARD/v2.0.3/edf/train'
@@ -255,8 +257,6 @@ def EDFProcess(EDFFilePath):
     RawEEGDataFile = mne.io.read_raw_edf(EDFFilePath, preload=True, verbose=False)
     RawEEGDataFile.interpolate_bads(verbose=False)
 
-    
-
     # bandpass raw file
     BPEEGDataFile = BPFilter(RawEEGDataFile)
     
@@ -297,7 +297,7 @@ def AlphaDeltaProcess(EEGFile):
 # Run the function
 # BPEEGDataFiles, ADRatioDF = AllEDFProcess(EDFInputPath)
 
-class Detector_Dataset(Dataset):
+""" class Detector_Dataset_og(Dataset):
     def __init__(self, data_paths, labels, args):
         self.data_paths = data_paths  # Paths to the preprocessed data files
         self.labels = labels  # Corresponding labels for each data file
@@ -344,8 +344,59 @@ class Detector_Dataset(Dataset):
         # Reshape segment to match the input dimensions required by the model
         segment = torch.tensor(np.expand_dims(segment, axis=0), dtype=torch.int32)  # Add a single channel dimension
 
-        return segment, label, data_path.split("/")[-1].split(".")[0]
+        return segment, label, data_path.split("/")[-1].split(".")[0] """
 
+class Detector_Dataset(Dataset):
+    def __init__(self, data_paths, labels, args, augment=None, data_type=None):
+        self.data_paths = data_paths  # Paths to the preprocessed data files
+        self.labels = labels  # Corresponding labels for each data file
+        self.args = args
+        self.augment = augment
+        self.data_type = data_type
+    
+    def __len__(self):
+        return len(self.data_paths)
+    
+    def __getitem__(self, index):
+        # Load preprocessed EEG data from .edf file
+        data_path = self.data_paths[index]
+        raw = read_raw_edf(data_path, preload=True, verbose=False)  # Load the EDF file
+        data = raw.get_data()  # Extract the raw EEG signals as a NumPy array
+        label = self.labels[index]
+
+        # Limit the number of time points if they exceed max_time_points
+        if data.shape[1] > self.args.max_time_points:
+            data = data[:, :self.args.max_time_points]
+
+        # Pad or trim channels to match target_channels
+        if data.shape[0] < self.args.target_channels:
+            # If the number of channels is less than target_channels, pad with zeros
+            padding = np.zeros((self.args.target_channels - data.shape[0], data.shape[1]))
+            data = np.vstack((data, padding))
+        elif data.shape[0] > self.args.target_channels:
+            # If the number of channels is more than target_channels, trim the channels
+            data = data[:self.args.target_channels, :]
+
+        # Randomly select a segment to keep the data size manageable
+        if data.shape[1] > self.args.segment_length:
+            start = np.random.randint(0, max(1, data.shape[1] - self.args.segment_length))
+            end = start + self.args.segment_length
+            segment = data[:, start:end]
+        else:
+            # If the data has fewer time points than segment_length, use all available points
+            segment = data
+
+        # Interpolate or compress each segment to match target_points
+        if segment.shape[1] != self.args.target_points:
+            segment = np.array([np.interp(np.linspace(0, 1, self.args.target_points),
+                                          np.linspace(0, 1, segment.shape[1]), channel)
+                                for channel in segment])
+
+        # Reshape segment to match the input dimensions required by the model
+        segment = torch.tensor(np.expand_dims(segment, axis=0), dtype=torch.float32)  # Add a single channel dimension
+
+        return segment, label, data_path.split("/")[-1].split(".")[0]
+    
 def eeg_binary_collate_fn(batch):
     def seq_length_(p):
         return len(p[0])
@@ -406,9 +457,9 @@ Detector_Dataset(eeg_files, labels, args)
 # - args: Configuration arguments (contains settings like eeg_type, batch_size, etc.).
 
 
-def get_data_preprocessed(args, mode="train"):
+""" def get_data_preprocessed_og(args, mode="train"):
    
-    print("Preparing data for bianry detector...")
+    print("Preparing data for binary detector...")
     train_data_path = args.data_path + "/dataset-tuh_task-binary_datatype-train_v6"
     # dev_data_path = args.data_path + "/dataset-tuh_task-binary_datatype-dev_v6"
     dev_data_path = args.data_path + "/dataset-tuh_task-binary_noslice_datatype-dev_v6"
@@ -515,4 +566,55 @@ def get_data_preprocessed(args, mode="train"):
     print("raw signal sample_rate: ", args.sample_rate)
     print("Augmentation: ", args.augmentation)     
     
-    return train_loader, val_loader, test_loader, len(train_data._data_list), len(val_data._data_list), len(test_data._data_list)
+    return train_loader, val_loader, test_loader, len(train_data._data_list), len(val_data._data_list), len(test_data._data_list) """
+
+
+def get_data_preprocessed(args, mode="train"):
+    print("Preparing data for binary detector...")
+
+    # Assuming paths to data files are provided in args
+    train_data_path = args.data_path + "/train"
+    dev_data_path = args.data_path + "/dev"
+
+    # Collect all .edf files in train and dev directories
+    train_files = []
+    train_labels = []
+    for root, _, files in os.walk(train_data_path):
+        for file in files:
+            if file.endswith(".edf"):
+                train_files.append(os.path.join(root, file))
+                train_labels.append(1 if "seizure" in file else 0)  # Example labeling, adjust as needed
+
+    dev_files = []
+    dev_labels = []
+    for root, _, files in os.walk(dev_data_path):
+        for file in files:
+            if file.endswith(".edf"):
+                dev_files.append(os.path.join(root, file))
+                dev_labels.append(1 if "seizure" in file else 0)  # Example labeling, adjust as needed
+
+    # Shuffle data
+    random.shuffle(train_files)
+    random.shuffle(dev_files)
+
+    # Create datasets
+    train_dataset = Detector_Dataset(train_files, train_labels, args)
+    val_dataset = Detector_Dataset(dev_files[:len(dev_files) // 2], dev_labels[:len(dev_files) // 2], args)
+    test_dataset = Detector_Dataset(dev_files[len(dev_files) // 2:], dev_labels[len(dev_files) // 2:], args)
+
+    # Use WeightedRandomSampler for imbalanced classes
+    class_sample_count = np.unique(train_labels, return_counts=True)[1]
+    weight = 1. / class_sample_count
+    samples_weight = torch.DoubleTensor([weight[label] for label in train_labels])
+    sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
+
+    # Create data loaders
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler, drop_last=True, num_workers=1, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, drop_last=True, num_workers=1, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, drop_last=True, num_workers=1, pin_memory=True, collate_fn=eeg_binary_collate_fn)
+
+    print("Number of training data: ", len(train_files))
+    print("Number of validation data: ", len(val_dataset))
+    print("Number of test data: ", len(test_dataset))
+
+    return train_loader, val_loader, test_loader, len(train_dataset), len(val_dataset), len(test_dataset)
