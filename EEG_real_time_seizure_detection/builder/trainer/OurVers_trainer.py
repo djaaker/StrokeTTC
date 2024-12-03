@@ -21,8 +21,8 @@ import matplotlib.pyplot as plt
 
 # Removed import of args from config
 # from control.config import args
-from builder.utils.nn_calibration import *
-from builder.utils.nn_calibration import _ECELoss
+#from builder.utils.nn_calibration import *
+#from builder.utils.nn_calibration import _ECELoss
 
 def plot_eeg_similarity_map(mma, sample, n_head):
     print("mma: ", mma)
@@ -52,10 +52,19 @@ def plot_eeg_similarity_map(mma, sample, n_head):
     exit(1)
 
 # Updated function to accept args as a parameter
-def sliding_window_v2(args, iteration, train_x, train_y, target_lengths, model, logger, device, scheduler=None, optimizer=None, criterion=None, signal_name_list=None, flow_type="train"):
+def sliding_window_v2(args, iteration, train_x, train_y, seq_lengths, target_lengths, model, logger, device, scheduler=None, optimizer=None, criterion=None, signal_name_list=None, flow_type="train"):
     target_lengths_tensor = torch.Tensor(target_lengths) - 2
-    train_x = train_x[:,0,:,:].permute(1, 0, 2)
+    if isinstance(train_x, list):
+        train_x = torch.tensor(train_x, dtype=torch.float32)  # Convert the list to a PyTorch tensor
+        #print(train_x)
+    if isinstance(train_y, list):
+        train_y = torch.tensor(train_y, dtype=torch.float32)  # Convert the list to a PyTorch tensor
+        #print(train_y)
+    #train_x = train_x.permute(1, 0, 2)
+    train_x = train_x.permute(0)
+   
     #train_y = train_y.permute(1, 0)
+    train_y = train_y.permute(0)
     iter_loss = []
     val_loss = []
 
