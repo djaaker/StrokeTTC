@@ -52,10 +52,10 @@ def plot_eeg_similarity_map(mma, sample, n_head):
     exit(1)
 
 # Updated function to accept args as a parameter
-def sliding_window_v2(args, iteration, train_x, train_y, seq_lengths, target_lengths, model, logger, device, scheduler=None, optimizer=None, criterion=None, signal_name_list=None, flow_type="train"):
+def sliding_window_v2(args, iteration, train_x, train_y, target_lengths, model, logger, device, scheduler=None, optimizer=None, criterion=None, signal_name_list=None, flow_type="train"):
     target_lengths_tensor = torch.Tensor(target_lengths) - 2
-    train_x = train_x.permute(1, 0, 2)
-    train_y = train_y.permute(1, 0)
+    train_x = train_x[:,0,:,:].permute(1, 0, 2)
+    #train_y = train_y.permute(1, 0)
     iter_loss = []
     val_loss = []
 

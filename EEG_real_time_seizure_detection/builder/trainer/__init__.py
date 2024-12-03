@@ -16,7 +16,7 @@ from .OurVers_trainer import sliding_window_v2
 # You can also add other imports here as needed
 
 
-def get_trainer(args, iteration, x, y, seq_lengths, target_lengths, model, logger, device, scheduler, optimizer, criterion, signal_name_list, flow_type="train"):
-    model, iter_loss = sliding_window_v2(args, iteration, x, y, seq_lengths, target_lengths, model, logger, device, scheduler, optimizer, criterion, signal_name_list, flow_type)
+def get_trainer(args, iteration, x, y, target_lengths, model, logger, device, scheduler, optimizer, criterion, signal_name_list, flow_type="train"):
+    model, iter_loss = sliding_window_v2(args, iteration, x, y, target_lengths, model, logger, device, scheduler, optimizer, criterion, signal_name_list, flow_type)
 
     return model, iter_loss

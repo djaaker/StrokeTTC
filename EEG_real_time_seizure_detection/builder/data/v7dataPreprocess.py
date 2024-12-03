@@ -8,55 +8,6 @@ from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.preprocessing import LabelEncoder
 
-# Paths
-dataRoot = r"/Volumes/SDCARD/v2.0.3/edf"
-labelPath = r"EEG_real_time_seizure_detection/DiseaseLabels.csv"
-
-# Read labels
-labelFrame = pd.read_csv(labelPath)
-print('This is label frame:\n', labelFrame)
-
-labels = []
-names = []
-paths = []
-noLabelCnt = 0
-
-# Combine train, dev, and eval paths
-splits = ['train', 'dev', 'eval']
-for split in splits:
-    splitPath = os.path.join(dataRoot, split)
-    if not os.path.exists(splitPath):
-        print(f"Split path does not exist: {splitPath}")
-        continue
-
-    subNames = os.listdir(splitPath)
-    for sub in subNames:
-        subPath = os.path.join(splitPath, sub)
-        if not os.path.isdir(subPath):
-            continue  # Skip if not a directory
-
-        if len(labelFrame.loc[labelFrame['name'] == sub]) == 0:
-            print("No label found for", sub)
-            noLabelCnt += 1
-            continue
-        else:
-            subject_label = labelFrame.loc[labelFrame['name'] == sub, 'label'].values[0]
-            labels.append(subject_label)
-            names.append(sub)  # Store the subject name
-            paths.append(subPath)  # Store the full path to the subject directory
-
-df = pd.DataFrame({'name': names, 'label': labels, 'path': paths})
-
-# Verify label counts
-label_counts = labelFrame['label'].value_counts()
-print("Label counts in labelFrame:")
-print(label_counts)
-
-num_healthy_subjects = sum(1 for l in labels if l == 0)
-num_seizure_subjects = sum(1 for l in labels if l == 3)
-print(f"Number of healthy subjects found: {num_healthy_subjects}")
-print(f"Number of seizure subjects found: {num_seizure_subjects}")
-
 # Set up args
 class Args:
     seed_list = [0, 1004, 911, 2021, 119]
@@ -90,76 +41,135 @@ class Args:
     max_time_points = 100000
 
     samples_per_class = 200  # Adjust as needed
-    verbose = True  # Set to True to enable verbose logging
+    verbose = False  # Set to True to enable verbose logging
+
 
 args = Args()
 
-# Collect EDF files and labels
-healthyEdfs = []
-seizEdfs = []
+# Paths
+dataRoot = r"/Volumes/SDCARD/v2.0.3/edf"
+labelPath = r"EEG_real_time_seizure_detection/DiseaseLabels.csv"
 
-for idx, row in df.iterrows():
-    subject_name = row['name']
-    subject_label = row['label']
-    subject_path = row['path']
+def preprocess():
+    # Read labels
+    labelFrame = pd.read_csv(labelPath)
+    print('This is label frame:\n', labelFrame)
 
-    # Only include labels 0 and 3
-    if subject_label == 0 or subject_label == 3:
-        # Recursively find all .edf files under the subject's directory
-        edf_files_in_subject = glob.glob(os.path.join(subject_path, '**', '*.edf'), recursive=True)
+    labels = []
+    names = []
+    paths = []
+    noLabelCnt = 0
 
-        if subject_label == 0:
-            healthyEdfs.extend(edf_files_in_subject)
-        elif subject_label == 3:
-            seizEdfs.extend(edf_files_in_subject)
+    # Combine train, dev, and eval paths
+    splits = ['train', 'dev', 'eval']
+    print(labelFrame.loc[labelFrame['label'] == 0])
+    for split in splits:
+        splitPath = os.path.join(dataRoot, split)
+        if not os.path.exists(splitPath):
+            print(f"Split path does not exist: {splitPath}")
+            continue
 
-        # Optionally print information for debugging
-        if args.verbose:
-            print(f"Collected {len(edf_files_in_subject)} edf files for subject {subject_name} (Label: {subject_label})")
-            if len(edf_files_in_subject) > 0:
-                print("Sample edf files:")
-                for f in edf_files_in_subject[:3]:
-                    print(f)
-    else:
-        # Ignore other labels (1 and 2)
-        continue
+        subNames = os.listdir(splitPath)
+        for sub in subNames:
+            subPath = os.path.join(splitPath, sub)
+            if not os.path.isdir(subPath):
+                continue  # Skip if not a directory
 
-# Remove duplicates
-healthyEdfs = list(set(healthyEdfs))
-seizEdfs = list(set(seizEdfs))
-edfFiles = healthyEdfs + seizEdfs
+            if len(labelFrame.loc[labelFrame['name'] == sub]) == 0:
+                print("No label found for", sub)
+                # noLabelCnt += 1
+                continue
+            else:
+                subject_label = labelFrame.loc[labelFrame['name'] == sub, 'label'].values[0]
+                labels.append(subject_label)
+                names.append(sub)  # Store the subject name
+                paths.append(subPath)  # Store the full path to the subject directory
 
-# Assign labels
-edfLabels = [0] * len(healthyEdfs) + [1] * len(seizEdfs)
+    df = pd.DataFrame({'name': names, 'label': labels, 'path': paths}) # will eventually be mlData for get_data_preprocessed
 
-# Check if we have collected healthy data
-if len(healthyEdfs) == 0:
-    raise ValueError("No healthy EDF files found. Please check the paths and ensure that healthy subjects are included.")
+    # Verify label counts
+    label_counts = labelFrame['label'].value_counts()
+    print("Label counts in labelFrame:")
+    print(label_counts)
 
-# Create DataFrame and shuffle
-mlData = pd.DataFrame({'file': edfFiles, 'label': edfLabels})
-mlData = mlData.sample(frac=1, random_state=args.seed).reset_index(drop=True)
+    num_healthy_subjects = sum(1 for l in labels if l == 0)
+    num_seizure_subjects = sum(1 for l in labels if l == 3)
+    print(f"Number of healthy subjects found: {num_healthy_subjects}")
+    print(f"Number of seizure subjects found: {num_seizure_subjects}")
 
-# Adjust samples_per_class if needed
-min_samples = min(len(healthyEdfs), len(seizEdfs))
-if min_samples == 0:
-    raise ValueError("No samples found for one of the classes. Please check your data paths and labels.")
-elif args.samples_per_class > min_samples:
-    args.samples_per_class = min_samples
-    print(f"Adjusted samples_per_class to {args.samples_per_class} due to limited data.")
 
-# Balance the dataset
-mlData = mlData.groupby('label', group_keys=False).apply(lambda x: x.sample(args.samples_per_class, random_state=args.seed)).reset_index(drop=True)
+    # Collect EDF files and labels
+    healthyEdfs = []
+    seizEdfs = []
 
-# Display counts
-print("Healthy count:", len(mlData[mlData['label'] == 0]))
-print("Seizure count:", len(mlData[mlData['label'] == 1]))
-print("Total samples:", len(mlData))
+    print(labelFrame.keys())
+    print(df.keys())
 
-# [Rest of your code remains the same]
-label_counts = labelFrame['label'].value_counts()
-print("Label counts in labelFrame:")
-print(label_counts)
+    for idx, row in df.iterrows():
+        subject_name = row['name']
+        subject_label = row['label']
+        subject_path = row['path']
+
+        # Only include labels 0 and 3
+        if subject_label == 1 or subject_label == 3:
+            # Recursively find all .edf files under the subject's directory
+            edf_files_in_subject = glob.glob(os.path.join(subject_path, '**', '*.edf'), recursive=True)
+
+            if subject_label == 1:
+                healthyEdfs.extend(edf_files_in_subject)
+            elif subject_label == 3:
+                seizEdfs.extend(edf_files_in_subject)
+
+
+            # Optionally print information for debugging
+            if args.verbose:
+                print(f"Collected {len(edf_files_in_subject)} edf files for subject {subject_name} (Label: {subject_label})")
+                if len(edf_files_in_subject) > 0:
+                    print("Sample edf files:")
+                    for f in edf_files_in_subject[:3]:
+                        print(f)
+        else:
+            # Ignore other labels (1 and 2)
+            continue
+
+    # Remove duplicates
+    healthyEdfs = list(set(healthyEdfs))
+    seizEdfs = list(set(seizEdfs))
+    edfFiles = healthyEdfs + seizEdfs
+
+    # Assign labels
+    edfLabels = [0] * len(healthyEdfs) + [1] * len(seizEdfs)
+
+    # Check if we have collected healthy data
+    if len(healthyEdfs) == 0:
+        raise ValueError("No healthy EDF files found. Please check the paths and ensure that healthy subjects are included.")
+
+    # Create DataFrame and shuffle
+    mlData = pd.DataFrame({'file': edfFiles, 'label': edfLabels})
+    mlData = mlData.sample(frac=1, random_state=args.seed).reset_index(drop=True)
+
+    # Adjust samples_per_class if needed
+    min_samples = min(len(healthyEdfs), len(seizEdfs))
+    if min_samples == 0:
+        raise ValueError("No samples found for one of the classes. Please check your data paths and labels.")
+    elif args.samples_per_class > min_samples:
+        args.samples_per_class = min_samples
+        print(f"Adjusted samples_per_class to {args.samples_per_class} due to limited data.")
+
+    # Balance the dataset
+    mlData = mlData.groupby('label', group_keys=False).apply(lambda x: x.sample(args.samples_per_class, random_state=args.seed)).reset_index(drop=True)
+
+    return mlData
+
+# # Display counts
+# print("Healthy count:", len(mlData[mlData['label'] == 0]))
+# print("Seizure count:", len(mlData[mlData['label'] == 1]))
+# print("Total samples:", len(mlData))
+
+# # [Rest of your code remains the same]
+# label_counts = labelFrame['label'].value_counts()
+# print("Label counts in labelFrame:")
+# print(label_counts)
 
 
 # Preprocessing functions
@@ -269,8 +279,10 @@ class Detector_Dataset(Dataset):
             return segment, label, os.path.basename(data_path).split(".")[0]
 
 # Adjusted get_data_preprocessed function
-def get_data_preprocessed(args, mlData):
-    print("Preparing data for binary detector...")
+def get_data_preprocessed(args):
+    print("Preparing for binary classification...")
+    args = Args()
+    mlData = preprocess()
 
     # Extract file paths and labels from mlData
     edf_files = mlData['file'].tolist()
@@ -334,7 +346,11 @@ def get_data_preprocessed(args, mlData):
     return train_loader, val_loader, test_loader, len(train_dataset), len(val_dataset), len(test_dataset)
 
 # Now, call get_data_preprocessed with args and mlData
-train_loader, val_loader, test_loader, len_train_dir, len_val_dir, len_test_dir = get_data_preprocessed(args, mlData)
+train_loader, val_loader, test_loader, len_train_dir, len_val_dir, len_test_dir = get_data_preprocessed(args)
 
 # Set mne logging level to suppress excessive output
 mne.set_log_level(verbose='WARNING')
+
+#theoretical best: 8:1:1 -- 80% train, 10% val, 10% test
+#actual: 3:1:1 -- 60% train, 20% val, 20% test
+#expected: 2:1:1

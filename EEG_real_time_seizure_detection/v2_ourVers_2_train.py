@@ -30,7 +30,7 @@ from torchinfo import summary
 
 # Custom modules and utilities (required external Python files)
 from builder.utils.lars import LARC  # Optimizer utility (external file needed)
-from builder.data.data_preprocess import get_data_preprocessed  # Data preprocessing function (external file needed)
+from builder.data.v7dataPreprocess import get_data_preprocessed  # Data preprocessing function (external file needed)
 from builder.models.detector_models.commented_resnet_lstm import CNN2D_LSTM_V8_4  # Import ResNetLSTM model directly (external file needed)
 from builder.utils.logger import Logger  # Logger utility to track training and validation metrics (external file needed)
 from builder.utils.utils import set_seeds, set_devices  # Utility functions for setting seeds and devices (external file needed)
@@ -76,13 +76,30 @@ class Args:
     output_dim = 2
 
     # Manually set paths here instead of using a YAML config file
-    data_path = '/path/to/data_directory/data_path'  # Set the data path directly
+    data_path = '/Volumes/SDCARD/v2.0.3/edf' # Set the data path directly
     dir_root = os.getcwd()  # Set the root directory as the current working directory
-    dir_result = '/path/to/results_directory'  # Set the result directory directly
+    dir_result = os.path.join(dir_root, 'results')  # Set the result directory directly
+
+    # Check if the results directory exists, and create it if it doesn't
+    if not os.path.exists(dir_result):
+        os.makedirs(dir_result)
+    reset = False  # Set reset flag to False to avoid overwriting existing results
+
+    num_layers = 2
+    hidden_dim = 512  # Number of features in the hidden state of the LSTM
+    dropout = 0.1  # Dropout rate for regularization
+    num_channel = 20  # Number of data channels (e.g., EEG channels)
+    sincnet_bandnum = 20  # SincNet configuration
+    enc_model = 'raw'  # Encoder model for feature extraction
+
+    window_shift_label = 1
+    window_size_label = 4
+    requirement_target = None
+    sincnet_kernel_size = 81
 
 def initialize_model(args, device):
     # Create the model
-    model = CNN2D_LSTM_V8_4(args).to(device)  # Directly initialize ResNetLSTM and move to the appropriate device (CPU, GPU, or MPS)
+    model = CNN2D_LSTM_V8_4(args, device).to(device)  # Directly initialize ResNetLSTM and move to the appropriate device (CPU, GPU, or MPS)
     return model
 
 def load_checkpoint(args, model, device, logger, seed_num):
@@ -144,12 +161,13 @@ def train_model(args, model, train_loader, val_loader, device, logger, optimizer
 
         # Iterate through each batch of training data
         for train_batch in train_loader:
-            train_x, train_y, seq_lengths, target_lengths, aug_list, signal_name_list = train_batch  # Unpack training batch
+            train_x, train_y, signal_name_list = train_batch  # Unpack training batch
+            target_lengths = 500
             train_x, train_y = train_x.to(device), train_y.to(device)  # Move data to appropriate device (CPU, GPU, or MPS)
             iteration += 1
 
             # Train the model and get loss
-            model, iter_loss = get_trainer(args, iteration, train_x, train_y, seq_lengths, target_lengths, model, logger, device, scheduler, optimizer, nn.CrossEntropyLoss(reduction='none'), signal_name_list)  # Perform a training step (external file needed)
+            model, iter_loss = get_trainer(args, iteration, train_x, train_y, target_lengths, model, logger, device, scheduler, optimizer, nn.CrossEntropyLoss(reduction='none'), signal_name_list)  # Perform a training step (external file needed)
             logger.loss += np.mean(iter_loss)
 
             # Logging training progress
