@@ -13,43 +13,7 @@ import math
 import torch
 from torch.optim.lr_scheduler import _LRScheduler
 import warnings
-from bisect import bisect_right
-from collections import Counter
-from functools import partial, wraps
-from typing import (
-    Any,
-    Callable,
-    cast,
-    Dict,
-    Iterable,
-    List,
-    Literal,
-    Optional,
-    Sequence,
-    SupportsFloat,
-    TypedDict,
-    Union,
-)
-from weakref import ref
 
-from torch import inf, Tensor
-
-def _format_param(name: str, optimizer, param):
-    """Return correctly formatted lr/momentum for each param group."""
-
-    def _copy(_param):
-        return _param.clone() if isinstance(_param, Tensor) else _param
-
-    if isinstance(param, (list, tuple)):
-        if len(param) != len(optimizer.param_groups):
-            raise ValueError(
-                f"{name} must have the same length as optimizer.param_groups. "
-                f"{name} has {len(param)} values, param_groups has {len(optimizer.param_groups)}."
-            )
-    else:
-        param = [param] * len(optimizer.param_groups)
-
-    return list(map(_copy, param))
 
 class CosineAnnealingWarmUpSingle(torch.optim.lr_scheduler.OneCycleLR):
     r"""
@@ -63,7 +27,7 @@ class CosineAnnealingWarmUpSingle(torch.optim.lr_scheduler.OneCycleLR):
     def __init__(self,
                  optimizer,
                  max_lr,
-                 total_steps=None,
+                 total_steps=40,
                  epochs=None,
                  steps_per_epoch=None,
                  pct_start=0.05,
@@ -76,7 +40,7 @@ class CosineAnnealingWarmUpSingle(torch.optim.lr_scheduler.OneCycleLR):
                  # three_phase=False,
                  last_epoch=-1,
                  verbose=False):
-        # super().__init__(optimizer, max_lr, total_steps, epochs, steps_per_epoch,
+        #super(CosineAnnealingWarmUpSingle, self).__init__(optimizer, max_lr, total_steps, epochs, steps_per_epoch,
         #                                                  pct_start, cycle_momentum, base_momentum,
         #                                                  max_momentum, div_factor, final_div_factor,
         #                                                  last_epoch, verbose, anneal_strategy='cos', three_phase=False)
@@ -126,7 +90,7 @@ class CosineAnnealingWarmUpSingle(torch.optim.lr_scheduler.OneCycleLR):
         self.anneal_func = [self._annealing_linear, self._annealing_cos]
 
         # Initialize learning rate variables
-        max_lrs = _format_param('max_lr', self.optimizer, max_lr)
+        max_lrs = self._format_param('max_lr', self.optimizer, max_lr)
         if last_epoch == -1:
             for idx, group in enumerate(self.optimizer.param_groups):
                 group['initial_lr'] = max_lrs[idx] / div_factor
@@ -151,6 +115,7 @@ class CosineAnnealingWarmUpSingle(torch.optim.lr_scheduler.OneCycleLR):
                     group['max_momentum'] = m_momentum
                     group['base_momentum'] = b_momentum
         _LRScheduler.__init__(self, optimizer, last_epoch=last_epoch, verbose=verbose)
+
 
     def get_lr(self):
         if not self._get_lr_called_within_step:

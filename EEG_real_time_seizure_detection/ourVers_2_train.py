@@ -25,8 +25,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
-from torchsummary import summary
-from torchinfo import summary
+#from torchsummary import summary
+#from torchinfo import summary
 
 # Custom modules and utilities (required external Python files)
 from builder.utils.lars import LARC  # Optimizer utility (external file needed)
@@ -96,9 +96,6 @@ class Args:
     window_size_label = 4
     requirement_target = None
     sincnet_kernel_size = 81
-    window_shift_sig = 1
-    window_size_sig = 4
-
 
 def initialize_model(args, device):
     # Create the model

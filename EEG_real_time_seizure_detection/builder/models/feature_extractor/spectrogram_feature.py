@@ -39,7 +39,7 @@ class SPECTROGRAM_FEATURE_HYPEROPT(nn.Module):
         # self.freq_max_div = self.freq_max // self.freq_group_len 
         self.final_batch = []
 
-        assert platform.system().lower() == 'linux' or platform.system().lower() == 'darwin'
+        assert platform.system().lower() == 'linux' or platform.system().lower() == 'darwin' or platform.system().lower() == 'windows'
         import torchaudio
 
         self.transforms = torchaudio.transforms.Spectrogram(n_fft=self.freq_resolution*self.sample_rate,
