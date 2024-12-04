@@ -48,12 +48,13 @@ args = Args()
 
 # Paths
 dataRoot = r"/Volumes/SDCARD/v2.0.3/edf"
+# this now becomes the combined 
 labelPath = r"EEG_real_time_seizure_detection/DiseaseLabels.csv"
+
 
 def preprocess():
     # Read labels
     labelFrame = pd.read_csv(labelPath)
-    print('This is label frame:\n', labelFrame)
 
     labels = []
     names = []
@@ -62,7 +63,6 @@ def preprocess():
 
     # Combine train, dev, and eval paths
     splits = ['train', 'dev', 'eval']
-    print(labelFrame.loc[labelFrame['label'] == 0])
     for split in splits:
         splitPath = os.path.join(dataRoot, split)
         if not os.path.exists(splitPath):
@@ -89,21 +89,18 @@ def preprocess():
 
     # Verify label counts
     label_counts = labelFrame['label'].value_counts()
-    print("Label counts in labelFrame:")
+    print("\n Label counts in labelFrame:")
     print(label_counts)
 
-    num_healthy_subjects = sum(1 for l in labels if l == 0)
+    num_healthy_subjects = sum(1 for l in labels if l == 1)
     num_seizure_subjects = sum(1 for l in labels if l == 3)
-    print(f"Number of healthy subjects found: {num_healthy_subjects}")
+    print(f"\nNumber of healthy subjects found: {num_healthy_subjects}")
     print(f"Number of seizure subjects found: {num_seizure_subjects}")
 
 
     # Collect EDF files and labels
     healthyEdfs = []
     seizEdfs = []
-
-    print(labelFrame.keys())
-    print(df.keys())
 
     for idx, row in df.iterrows():
         subject_name = row['name']
@@ -123,9 +120,9 @@ def preprocess():
 
             # Optionally print information for debugging
             if args.verbose:
-                print(f"Collected {len(edf_files_in_subject)} edf files for subject {subject_name} (Label: {subject_label})")
+                print(f"\nCollected {len(edf_files_in_subject)} edf files for subject {subject_name} (Label: {subject_label})")
                 if len(edf_files_in_subject) > 0:
-                    print("Sample edf files:")
+                    print("\nSample edf files:")
                     for f in edf_files_in_subject[:3]:
                         print(f)
         else:
@@ -142,7 +139,7 @@ def preprocess():
 
     # Check if we have collected healthy data
     if len(healthyEdfs) == 0:
-        raise ValueError("No healthy EDF files found. Please check the paths and ensure that healthy subjects are included.")
+        raise ValueError("\nNo healthy EDF files found. Please check the paths and ensure that healthy subjects are included.")
 
     # Create DataFrame and shuffle
     mlData = pd.DataFrame({'file': edfFiles, 'label': edfLabels})
@@ -151,25 +148,15 @@ def preprocess():
     # Adjust samples_per_class if needed
     min_samples = min(len(healthyEdfs), len(seizEdfs))
     if min_samples == 0:
-        raise ValueError("No samples found for one of the classes. Please check your data paths and labels.")
+        raise ValueError("\nNo samples found for one of the classes. Please check your data paths and labels.")
     elif args.samples_per_class > min_samples:
         args.samples_per_class = min_samples
-        print(f"Adjusted samples_per_class to {args.samples_per_class} due to limited data.")
+        print(f"\nAdjusted samples_per_class to {args.samples_per_class} due to limited data.")
 
     # Balance the dataset
     mlData = mlData.groupby('label', group_keys=False).apply(lambda x: x.sample(args.samples_per_class, random_state=args.seed)).reset_index(drop=True)
 
     return mlData
-
-# # Display counts
-# print("Healthy count:", len(mlData[mlData['label'] == 0]))
-# print("Seizure count:", len(mlData[mlData['label'] == 1]))
-# print("Total samples:", len(mlData))
-
-# # [Rest of your code remains the same]
-# label_counts = labelFrame['label'].value_counts()
-# print("Label counts in labelFrame:")
-# print(label_counts)
 
 
 # Preprocessing functions
