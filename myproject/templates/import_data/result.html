@@ -1,0 +1,45 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<h2>EEG Analysis Results</h2>
+
+<p>{{ result }}</p> <!-- Display the ML result -->
+
+{% if eeg_plot_url %}
+    <h3>EEG Plot</h3>
+    <div class="scroll-container">
+        <img src="{{ eeg_plot_url }}" alt="EEG Plot" class="eeg-plot">
+    </div>
+{% endif %}
+
+<style>
+    .scroll-container {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        white-space: nowrap;
+    }
+
+    .eeg-plot {
+        height: 300px;  /* Adjusted to make it less tall */
+        display: inline-block;
+    }
+</style>
+
+<br>
+<br> 
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bar Chart with CI</title>
+</head>
+<body>
+    <h1>Diagnosis Chart with Confidence Intervals</h1>
+    <img src="{% static 'bar_graph_ci.png' %}?{{ timestamp }}" alt="Bar Graph with Confidence Intervals">
+</body>
+</html>
+{% endblock %}
