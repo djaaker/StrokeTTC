@@ -1,3 +1,5 @@
+#this is going to be our main.py file that imports all the good preprocessing stuff and data input stuff and the machine learning stuff
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -85,7 +87,10 @@ class SimpleCNN(nn.Module):
         x = self.fc1(x)
         return x
 
-model = SimpleCNN().to(device)
+#model = SimpleCNN().to(device)
+model_path = 'full_model.pth'
+model = SimpleCNN().to(device)  # Initialize the model
+model.load_state_dict(torch.load(model_path, map_location=device))  # Load the state dictionary
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
