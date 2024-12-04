@@ -25,8 +25,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
-from torchsummary import summary
-from torchinfo import summary
+#from torchsummary import summary
+#from torchinfo import summary
 
 # Custom modules and utilities (required external Python files)
 from builder.utils.lars import LARC  # Optimizer utility (external file needed)
