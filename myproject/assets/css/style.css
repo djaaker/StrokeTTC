@@ -1,0 +1,113 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+    background-color: #FFFFFF;
+    font-family: Arial, sans-serif;
+}
+
+/* Navigation bar */
+nav {
+    padding: 1rem;
+    background-color: #636363;
+    color: #FFFFFF;
+    font-size: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center; 
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100; /* Keep the nav bar on top */
+    height: 60px; /* Adjust the height to your needs */
+}
+
+nav a {
+    color: #FFFFFF;
+    text-decoration: none;
+    margin-left: 1rem;
+}
+
+nav a:hover {
+    opacity: 0.7;
+}
+
+/* Sidebar styling */
+.sidebar {
+    width: 200px;
+    background-color: #7DF9FF;
+    padding: 2rem 1rem;
+    position: fixed;
+    top: 60px; /* Set this to the height of the nav bar */
+    left: 0;
+    bottom: 0;
+    z-index: 100; /* Ensure sidebar is still above other content */
+}
+
+.sidebar a {
+    display: block;
+    color: #000;
+    padding: 1rem 0;
+    text-decoration: none;
+    font-size: 1.2rem;
+}
+
+.sidebar a:hover {
+    background-color: #F0F0F0;
+}
+
+/* Main content */
+main {
+    margin-left: 220px; /* Adjust based on sidebar width */
+    margin-top: 60px; /* To avoid being hidden under the fixed navbar */
+    padding: 2rem;
+    font-size: 1rem;
+    color: #000;
+}
+
+form {
+    margin-bottom: 2rem;
+}
+
+h2 {
+    margin-bottom: 1rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.page-title {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background-color: #00BFFF; /* Use the background color from the image */
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+    position: relative; /* You can change this based on your layout */
+    top: 0;
+    left: 0;
+    z-index: 100; /* Ensures it stays on top of other elements */
+    width: 100%; /* Adjust if needed */
+}
+
+.page-title .logo {
+    width: 50px; /* Adjust logo size */
+    height: 50px; /* Adjust logo size */
+    margin-right: 1rem;
+}
+
+.page-title span {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
