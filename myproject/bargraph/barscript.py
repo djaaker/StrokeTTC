@@ -38,7 +38,7 @@ def create_bar_graph_with_ci():
     ax.set_title('Diagnosis Graph with Confidence Intervals')
 
     # Save the plot as an image
-    output_path = os.path.join(settings.BASE_DIR,'static', 'bar_graph_ci.png')
+    output_path = os.path.join(settings.BASE_DIR,'static', 'bar_graph_ci998.png')
     print(f"Saving image to: {output_path}")
     plt.savefig(output_path)  # Save to Django static folder
     

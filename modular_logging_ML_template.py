@@ -3,12 +3,15 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+from PIL import Image
 import logging
 from torch.utils.tensorboard import SummaryWriter
 import os
 from torch.utils.data import random_split
 import numpy as np
 from sklearn.metrics import confusion_matrix
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from torchmetrics.classification import MulticlassCalibrationError  # For calibration metrics
 
@@ -188,7 +191,13 @@ def evaluate_model(model, data_loader, device, temperature, num_classes):
     return metrics
 
 # Function to test on a single data point
-def test_single_data_point(model, data_point, label, device, temperature, class_names=None):
+def test_single_data_point(model, data_point, label, device, temperature, output_folder, class_names=None):
+    global glo_probs, glo_classes
+    plt.clf()  # Clear the current figure
+    plt.close('all')  # Close all open figures
+    if class_names == None:
+        class_names = ['Healthy', 'Stroke', 'Epilepsy', 'Concussion', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+    #print(f'Class names: {class_names}')
     model.eval()
     with torch.no_grad():
         single_image_input = data_point.to(device).unsqueeze(0)  # Add batch dimension
@@ -199,7 +208,8 @@ def test_single_data_point(model, data_point, label, device, temperature, class_
         # Apply softmax to get probabilities
         probabilities = torch.nn.functional.softmax(scaled_output, dim=1)
         probabilities = probabilities.cpu().numpy()[0]  # Convert to numpy array
-
+        #print(f"Length of class_names: {len(class_names)}")
+        #print(f"Length of probabilities: {len(probabilities)}")
         # Get predicted label
         predicted_label = np.argmax(probabilities)
         actual_label = label
@@ -209,39 +219,70 @@ def test_single_data_point(model, data_point, label, device, temperature, class_
         accuracy = 100 * is_correct
 
         logging.info('Single Data Point Test:')
-        if class_names:
+        if class_names is not None:
             logging.info(f'Actual Label: {class_names[actual_label]}')
             logging.info(f'Predicted Label: {class_names[predicted_label]}')
         else:
             logging.info(f'Actual Label: {actual_label}')
             logging.info(f'Predicted Label: {predicted_label}')
+        # if class_names:
+        #     logging.info(f'Actual Label: {class_names[actual_label]}')
+        #     logging.info(f'Predicted Label: {class_names[predicted_label]}')
+        # else:
+        #     logging.info(f'Actual Label: {actual_label}')
+        #     logging.info(f'Predicted Label: {predicted_label}')
         logging.info(f'Accuracy: {accuracy}%')
         logging.info('Class Probabilities:')
+        #print(f'Class names: {class_names}')
         for i, prob in enumerate(probabilities):
             class_label = class_names[i] if class_names else i
             logging.info(f'Class {class_label}: {prob*100:.2f}%')
 
+        # Unnormalize the image for visualization
+        unnormalized_img = data_point * 0.3081 + 0.1307  # Unnormalize
+
+        # Convert to PIL Image
+        to_pil = transforms.ToPILImage()
+        pil_image = to_pil(unnormalized_img)
+
+        # Save the image as PNG
+        pil_image.save("bar_graph_ci90.png")
         # Visualize the input image and prediction in TensorBoard
         # Unnormalize the image for visualization
-        img = data_point.numpy() * 0.3081 + 0.1307  # Unnormalize
+        img = unnormalized_img.numpy()   # Unnormalize
 
         # Add image and prediction to TensorBoard
         writer.add_image('Single Test Image', img, dataformats='CHW')
         writer.add_text('Single Test Prediction',
                         f'Actual Label: {actual_label}, Predicted Label: {predicted_label}, Accuracy: {accuracy}%')
+        #print(f'Class names: {class_names}')
+        try:
+            # Plot the probabilities as a bar graph
+            fig, ax = plt.subplots()
+            classes = class_names if class_names is not None else list(range(len(probabilities)))
+            #print(f'Classes: {classes}')
+            x_pos = np.arange(len(classes))
+            #print(f'x_pos: {x_pos}')
+            ax.bar(classes, probabilities*100)
+            ax.set_xlabel('Potential Diagnoses')
+            ax.set_ylabel('Confidence (%)')
+            ax.set_title('Diagnosis Graph')
+            ax.set_xticks(x_pos)
+            plt.xticks(rotation=45)
+            plt.tight_layout()
 
-        # Plot the probabilities as a bar graph
-        fig, ax = plt.subplots()
-        classes = class_names if class_names else list(range(len(probabilities)))
-        ax.bar(classes, probabilities)
-        ax.set_xlabel('Class')
-        ax.set_ylabel('Probability')
-        ax.set_title('Class Probabilities')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
+            output_file = os.path.join(output_folder, 'bar_graph_ci.png')
+            fig.savefig(output_file)
 
-        # Add the figure to TensorBoard
-        writer.add_figure('Class Probabilities', fig)
+            # Add the figure to TensorBoard
+            writer.add_figure('Class Probabilities', fig)
+            writer.flush()
+
+        except Exception as e:
+            logging.error(f'Error during plotting: {e}')
+
+        glo_probs = probabilities
+        glo_classes = class_label
 
 # Training loop
 total_steps = len(train_loader)
@@ -284,7 +325,10 @@ log_metrics(test_metrics, num_epochs, phase='Test')
 # Test on a single data point
 # Let's take the first image from the test set
 single_image, single_label = test_dataset[0]
-test_single_data_point(model, single_image, single_label, device, temperature)
+output_folder = os.path.join(os.getcwd(), 'StrokeTTC', 'myproject', 'static')
+#class_names = None
+class_names = ['Healthy', 'Stroke', 'Epilepsy', 'Concussion', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+test_single_data_point(model, single_image, single_label, device, temperature, output_folder, class_names=class_names)
 
 logging.info("Training and evaluation completed.")
 
