@@ -13,14 +13,16 @@ def import_data_view(request):
         form = EEGFileUploadForm(request.POST, request.FILES)
         if form.is_valid():
             eeg_file = form.save()  # Save the uploaded file
+            print(f'File path: {eeg_file}')
             file_path = os.path.join(settings.MEDIA_ROOT, eeg_file.file.name)  # Full path to the uploaded file
-            
+            print(f'File path: {file_path}')
             # Run the preprocessing function
             processed_data, PSD_data = preprocess_eeg(file_path)
             
             # Run the ML model on the processed data
-            result = run_ml_model(processed_data, PSD_data)
-            
+            result = run_ml_model(file_path)
+            #predicted_label, prob_png = run_ml_model(file_path)
+
             # Save the EEG plot as an image file
             eeg_plot_path = os.path.join(settings.MEDIA_ROOT, 'uploads', 'eeg_plot.png')
             EEG_image = processed_data.plot(scalings='auto', show=False, block=False)
@@ -34,6 +36,7 @@ def import_data_view(request):
             # Pass the result and plot URL to the template
             context = {
                 'result': result,
+                #'result': predicted_label,
                 'eeg_plot_url': eeg_plot_url  # URL to access the EEG plot image
             }
             return render(request, 'import_data/result.html', context)
