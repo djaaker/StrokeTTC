@@ -196,7 +196,7 @@ def test_single_data_point(model, data_point, label, device, temperature, output
     plt.clf()  # Clear the current figure
     plt.close('all')  # Close all open figures
     if class_names == None:
-        class_names = ['Healthy', 'Stroke', 'Epilepsy', 'Concussion', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+        class_names = ['Healthy', 'Stroke', 'Epilepsy', 'Concussion', 'Seizure', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
     #print(f'Class names: {class_names}')
     model.eval()
     with torch.no_grad():
@@ -327,7 +327,7 @@ log_metrics(test_metrics, num_epochs, phase='Test')
 single_image, single_label = test_dataset[0]
 output_folder = os.path.join(os.getcwd(), 'StrokeTTC', 'myproject', 'static')
 #class_names = None
-class_names = ['Healthy', 'Stroke', 'Epilepsy', 'Concussion', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+class_names = ['Healthy', 'Stroke', 'Epilepsy', 'Concussion','Seizure', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
 test_single_data_point(model, single_image, single_label, device, temperature, output_folder, class_names=class_names)
 
 logging.info("Training and evaluation completed.")
