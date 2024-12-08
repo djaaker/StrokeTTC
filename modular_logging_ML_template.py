@@ -72,7 +72,7 @@ val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
 test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                           batch_size=batch_size,
                                           shuffle=False)
-
+'''
 # Simple CNN model (you can replace this with any other model)
 class SimpleCNN(nn.Module):
     def __init__(self):
@@ -86,6 +86,7 @@ class SimpleCNN(nn.Module):
         x = x.view(-1, 16 * 12 * 12)
         x = self.fc1(x)
         return x
+'''
 
 # Define a basic block for ResNet. This block will be reused in the construction of ResNet layers.
 class BasicBlock(nn.Module):
